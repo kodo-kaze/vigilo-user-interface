@@ -1,62 +1,40 @@
 # =============================================================================
 # STAGE 1: Build the Next.js Frontend
 # =============================================================================
-FROM node:20-slim AS frontend-builder
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
-
-# Install npm dependencies
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copy full repository source and build standalone distribution
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
 RUN npm run build
 
 # =============================================================================
-# STAGE 2: Production Unified Runner (Python 3.12 + Node.js)
+# STAGE 2: Production Standalone Runner
 # =============================================================================
-FROM python:3.12-slim AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-# 1. Install system utilities and multimedia libraries for OpenCV, video decoding, and Node.js
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    ffmpeg \
-    libgl1 \
-    libglib2.0-0 \
-    libgomp1 \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# 2. Install Python AI dependencies (universal CPU PyTorch wheels + vision models)
-COPY backend/requirements.txt /app/backend/
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
-    pip install --no-cache-dir -r /app/backend/requirements.txt
-
-# 3. Copy Backend Code & AI Model Weights
-COPY backend /app/backend
-
-# 4. Copy Next.js Standalone Build and Static Assets
-COPY --from=frontend-builder /app/.next/standalone /app/
-COPY --from=frontend-builder /app/.next/static /app/.next/static
-COPY --from=frontend-builder /app/public /app/public
-
-# 5. Configure Entrypoint Process Supervisor
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
-# Environment variables
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV CROWD_STREAM_SOURCE="0"
-ENV INTERNAL_BACKEND_URL="http://127.0.0.1:8000"
+ENV INTERNAL_BACKEND_URL="http://vigilo-edge-api:8000"
 
-EXPOSE 3000 8000
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+EXPOSE 3000
+
+CMD ["node", "server.js"]
