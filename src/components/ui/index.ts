@@ -41,3 +41,6 @@ export { default as UiloraCloudBackground } from "./UiloraCloudBackground";
 
 // Dashboard Specialized Components
 export * from "../dashboard";
+
+// Passenger Experience Components
+export * from "../passenger";
