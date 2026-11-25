@@ -9,7 +9,7 @@ import {
   CameraDetailsCard,
   type TelemetryStats,
 } from "@/src/components/ui";
-import { usePassengerLocation, type StationSectorPreset } from "@/src/hooks/usePassengerLocation";
+import { usePassengerLocation } from "@/src/hooks/usePassengerLocation";
 import { useNearestCamera } from "@/src/hooks/useNearestCamera";
 
 const DEFAULT_BACKEND_URL =
@@ -46,15 +46,8 @@ export default function DashboardPage() {
   const [cameras, setCameras] = useState<GeoCameraSummary[]>([]);
   const [selectedCamId, setSelectedCamId] = useState<string | null>(null);
 
-  // Live Location Detector (High-accuracy GPS watching + Station Sector Presets)
-  const {
-    coords,
-    permissionState: locationPermission,
-    activePreset,
-    requestLocation,
-    selectPreset,
-    presets,
-  } = usePassengerLocation();
+  // Live GPS Location detector
+  const { coords } = usePassengerLocation();
 
   // Dynamic Nearest Camera resolver with 15m geo-hysteresis & 10s heartbeat
   const { cameraData: nearestCamera } = useNearestCamera(coords);
@@ -425,100 +418,6 @@ export default function DashboardPage() {
 
       {/* Main Glass Workspace Container (Wide Bento Frame, Zero-Scroll) */}
       <div className="relative z-10 mx-auto w-full max-w-[1640px] h-full flex flex-col justify-between gap-2.5 sm:gap-3">
-        {/* TOP BAR: LOCATION DETECTOR & SECTOR PRESETS */}
-        <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 px-1 select-none z-20">
-          {/* Left: GPS Indicator & Nearest Camera Match */}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={requestLocation}
-              className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-all cursor-pointer backdrop-blur-md shadow-sm ${
-                locationPermission === "granted"
-                  ? "border-emerald-400/40 bg-emerald-950/40 text-emerald-200 shadow-[0_0_12px_rgba(52,211,153,0.25)]"
-                  : locationPermission === "simulated"
-                  ? "border-cyan-400/40 bg-cyan-950/40 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.25)]"
-                  : locationPermission === "requesting"
-                  ? "border-amber-400/40 bg-amber-950/40 text-amber-200"
-                  : "border-white/15 bg-black/40 text-white/80 hover:border-white/30"
-              }`}
-              title="Click to detect or re-scan live GPS location"
-            >
-              <span
-                className={`h-2 w-2 rounded-full shrink-0 ${
-                  locationPermission === "granted"
-                    ? "bg-emerald-400 animate-pulse"
-                    : locationPermission === "simulated"
-                    ? "bg-cyan-400"
-                    : locationPermission === "requesting"
-                    ? "bg-amber-400 animate-ping"
-                    : "bg-amber-400"
-                }`}
-              />
-              <span className="text-xs font-sans font-medium">
-                {locationPermission === "granted" && coords
-                  ? `Auto GPS (${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)})`
-                  : locationPermission === "simulated" && coords
-                  ? `${activePreset?.name || "Zone"} (${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)})`
-                  : locationPermission === "requesting"
-                  ? "Acquiring GPS Fix..."
-                  : locationPermission === "denied"
-                  ? "GPS Blocked (Click to retry)"
-                  : "Detect Live Location"}
-              </span>
-            </button>
-
-            {nearestCamera?.matched && (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-cyan-400/30 bg-cyan-950/40 text-cyan-200 text-xs font-sans backdrop-blur-md">
-                <span className="text-cyan-400 font-semibold">Nearest:</span>
-                <span className="font-medium">{nearestCamera.name || nearestCamera.cam_id}</span>
-                {nearestCamera.zone && (
-                  <span className="text-white/40 hidden sm:inline">• {nearestCamera.zone}</span>
-                )}
-                {nearestCamera.distance_meters != null && (
-                  <span className="text-cyan-300 font-mono font-medium">
-                    ({nearestCamera.distance_meters < 1000
-                      ? `${Math.round(nearestCamera.distance_meters)}m away`
-                      : `${(nearestCamera.distance_meters / 1000).toFixed(1)}km away`})
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Right: Quick Station Sector Selectors */}
-          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-full">
-            <button
-              type="button"
-              onClick={requestLocation}
-              className={`px-3 py-1 rounded-full text-xs font-sans font-medium transition-all cursor-pointer whitespace-nowrap ${
-                locationPermission === "granted"
-                  ? "border border-emerald-400/50 bg-emerald-950/70 text-emerald-200 shadow-[0_0_10px_rgba(52,211,153,0.35)]"
-                  : "border border-white/10 bg-white/[0.04] text-white/60 hover:text-white hover:bg-white/[0.08]"
-              }`}
-            >
-              • Auto GPS
-            </button>
-            {presets.map((preset) => {
-              const isSelected = activePreset?.id === preset.id;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => selectPreset(preset)}
-                  className={`px-3 py-1 rounded-full text-xs font-sans font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    isSelected
-                      ? "border border-cyan-400/50 bg-cyan-950/70 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.35)]"
-                      : "border border-white/10 bg-white/[0.04] text-white/60 hover:text-white hover:bg-white/[0.08]"
-                  }`}
-                  title={preset.description}
-                >
-                  {preset.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* TOP SECTION: LIVE VIDEO FOOTAGE */}
         <DashboardVideoFeed
           backendUrl={backendUrl}
