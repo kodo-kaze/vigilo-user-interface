@@ -106,7 +106,7 @@ export default function CrowdDynamicsCard({
           {/* Metric 1: People Count */}
           <TelemetryMetricTile
             label="Detected People"
-            value={stats.people_count}
+            value={stats.people_count ?? 0}
             unit="pedestrians"
             subtitle="Instant Bounding Count"
           />
@@ -114,7 +114,7 @@ export default function CrowdDynamicsCard({
           {/* Metric 2: Spatial Density */}
           <TelemetryMetricTile
             label="Spatial Density"
-            value={stats.density_per_megapixel.toFixed(1)}
+            value={(stats.density_per_megapixel ?? 0).toFixed(1)}
             unit="/ MP"
             subtitle="Area Saturation Index"
           />
@@ -140,14 +140,14 @@ export default function CrowdDynamicsCard({
           {/* Metric 5: NN Proximity */}
           <TelemetryMetricTile
             label="NN Proximity"
-            value={stats.nearest_neighbor_distance.toFixed(3)}
+            value={(stats.nearest_neighbor_distance ?? 0).toFixed(3)}
             subtitle="Cluster Tightness Ratio"
           />
 
           {/* Metric 6: Inference FPS */}
           <TelemetryMetricTile
             label="Inference Speed"
-            value={stats.fps.toFixed(1)}
+            value={(stats.fps ?? 0).toFixed(1)}
             unit="fps"
             subtitle="Neural Engine Speed"
           />

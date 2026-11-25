@@ -88,12 +88,38 @@ export default function DashboardPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setStats(data);
-        setStreamError(false);
-        if (data.camera_connected && !data.is_suspended) {
-          setStreamConnected(true);
-        } else if (data.is_suspended) {
-          setStreamConnected(false);
+        if (data && typeof data === "object") {
+          setStats((prev) => ({
+            ...prev,
+            ...data,
+            fps: typeof data.fps === "number" ? data.fps : (prev.fps ?? 0),
+            density_per_megapixel:
+              typeof data.density_per_megapixel === "number"
+                ? data.density_per_megapixel
+                : (prev.density_per_megapixel ?? 0),
+            nearest_neighbor_distance:
+              typeof data.nearest_neighbor_distance === "number"
+                ? data.nearest_neighbor_distance
+                : (prev.nearest_neighbor_distance ?? 0),
+            crowd_probability:
+              typeof data.crowd_probability === "number"
+                ? data.crowd_probability
+                : (prev.crowd_probability ?? 0),
+            people_count:
+              typeof data.people_count === "number"
+                ? data.people_count
+                : (prev.people_count ?? 0),
+            uptime_seconds:
+              typeof data.uptime_seconds === "number"
+                ? data.uptime_seconds
+                : (prev.uptime_seconds ?? 0),
+          }));
+          setStreamError(false);
+          if (data.camera_connected && !data.is_suspended) {
+            setStreamConnected(true);
+          } else if (data.is_suspended) {
+            setStreamConnected(false);
+          }
         }
       } else {
         setStreamConnected(false);
@@ -207,8 +233,8 @@ export default function DashboardPage() {
     }
   }, [stats.clusters_enabled]);
 
-  const isAlert = stats.is_crowd || stats.status === "CROWD ALERT";
-  const probabilityPercent = Math.round(stats.crowd_probability * 100);
+  const isAlert = Boolean(stats.is_crowd || stats.status === "CROWD ALERT");
+  const probabilityPercent = Math.round((stats.crowd_probability ?? 0) * 100);
 
   // Format uptime into MM:SS or HH:MM:SS
   const formatUptime = (seconds: number) => {

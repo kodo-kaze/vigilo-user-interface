@@ -1,19 +1,19 @@
 export interface TelemetryStats {
   status: string;
   is_suspended?: boolean;
-  is_crowd: boolean;
-  crowd_probability: number;
-  people_count: number;
-  density_per_megapixel: number;
-  nearest_neighbor_distance: number;
+  is_crowd?: boolean;
+  crowd_probability?: number;
+  people_count?: number;
+  density_per_megapixel?: number;
+  nearest_neighbor_distance?: number;
   dense_clusters_count?: number;
   gatherings_count?: number;
   isolated_count?: number;
   heatmap_enabled?: boolean;
   clusters_enabled?: boolean;
-  fps: number;
+  fps?: number;
   capture_fps?: number;
-  camera_connected: boolean;
+  camera_connected?: boolean;
   resolution?: string;
   camera_source?: string;
   camera_raw_source?: string;
@@ -22,7 +22,7 @@ export interface TelemetryStats {
   camera_port?: number | null;
   zone?: string;
   model_mesh?: string;
-  uptime_seconds: number;
+  uptime_seconds?: number;
 }
 
 export interface CameraPreset {

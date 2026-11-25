@@ -161,7 +161,7 @@ export default function CameraDetailsCard({
                 System Uptime
               </span>
               <span className="mt-0.5 text-xs font-mono font-medium text-white/90 truncate">
-                {formatUptime(stats.uptime_seconds)}
+                {formatUptime(stats.uptime_seconds ?? 0)}
               </span>
             </div>
           </div>

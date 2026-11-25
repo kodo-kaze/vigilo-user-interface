@@ -440,7 +440,7 @@ export default function DashboardVideoFeed({
         {/* Bottom-Right Floating Overlay HUD */}
         <div className="pointer-events-none absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3 z-20 select-none">
           <LiquidPill size="xs" textClassName="font-mono text-white/80" className="!px-3 !py-1 text-[11px]">
-            <span>FPS: {isSuspended ? "0.0" : stats.fps.toFixed(1)}</span>
+            <span>FPS: {isSuspended ? "0.0" : (stats.fps ?? 0).toFixed(1)}</span>
           </LiquidPill>
         </div>
       </div>
