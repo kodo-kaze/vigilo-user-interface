@@ -7,23 +7,8 @@ export type { CrowdDynamicsCardProps } from "./CrowdDynamicsCard";
 export { default as CameraDetailsCard } from "./CameraDetailsCard";
 export type { CameraDetailsCardProps } from "./CameraDetailsCard";
 
-export { default as CameraSourceModal } from "./CameraSourceModal";
-export type { CameraSourceModalProps } from "./CameraSourceModal";
-
-export { default as CameraSourceNodeCard } from "./CameraSourceNodeCard";
-export type { CameraSourceNodeCardProps } from "./CameraSourceNodeCard";
-
 export { default as TelemetryMetricTile } from "./TelemetryMetricTile";
 export type { TelemetryMetricTileProps } from "./TelemetryMetricTile";
-
-export { default as CameraNetworkStreamTab } from "./CameraNetworkStreamTab";
-export type { CameraNetworkStreamTabProps } from "./CameraNetworkStreamTab";
-
-export { default as CameraPresetsTab } from "./CameraPresetsTab";
-export type { CameraPresetsTabProps } from "./CameraPresetsTab";
-
-export { default as CameraCustomUriTab } from "./CameraCustomUriTab";
-export type { CameraCustomUriTabProps } from "./CameraCustomUriTab";
 
 export type {
   TelemetryStats,

@@ -7,7 +7,6 @@ import {
   DashboardVideoFeed,
   CrowdDynamicsCard,
   CameraDetailsCard,
-  CameraSourceModal,
   type TelemetryStats,
 } from "@/src/components/ui";
 
@@ -16,13 +15,34 @@ const DEFAULT_BACKEND_URL =
 
 const AUTO_START_STORAGE_KEY = "vigilo_auto_start_camera";
 
+export interface GeoCameraSummary {
+  cam_id: string;
+  name: string;
+  zone?: string;
+  station_name?: string;
+  status?: string;
+  active?: boolean;
+  is_public?: boolean;
+  is_crowd?: boolean;
+  crowd_probability?: number;
+  person_count?: number;
+  people_per_megapixel?: number;
+  dense_clusters_count?: number;
+  gatherings_count?: number;
+  stream_url?: string;
+  mjpeg_url?: string;
+}
+
 export default function DashboardPage() {
   const [isPaused, setIsPaused] = useState(false);
   const backendUrl = DEFAULT_BACKEND_URL;
   const [streamConnected, setStreamConnected] = useState(false);
   const [streamError, setStreamError] = useState(false);
   const [isPowerToggling, setIsPowerToggling] = useState(false);
-  const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+
+  // Cloud cameras registered via Edge Server to Geo Server
+  const [cameras, setCameras] = useState<GeoCameraSummary[]>([]);
+  const [selectedCamId, setSelectedCamId] = useState<string | null>(null);
 
   // Initialize autoStartCamera lazily from localStorage to prevent setState in effect
   const [autoStartCamera, setAutoStartCamera] = useState<boolean>(() => {
@@ -58,8 +78,8 @@ export default function DashboardPage() {
     capture_fps: 0.0,
     camera_connected: false,
     resolution: "Detecting...",
-    camera_source: "Integrated Camera (Index 0)",
-    zone: "Terminal Concourse 04 • Zone B",
+    camera_source: "Live Vision Ingestion",
+    zone: "Central Station Hub • Operations Control Room",
     model_mesh: "YOLO26m + Conflux Random Forest + Spatial Clustering",
     uptime_seconds: 0,
   });
@@ -79,8 +99,57 @@ export default function DashboardPage() {
     });
   }, []);
 
-  // Poll telemetry metrics from backend /stats
+  // Poll telemetry metrics from Cloud Geo Server (/api/geo/cameras) with fallback to local (/stats)
   const fetchTelemetry = useCallback(async () => {
+    try {
+      // 1. Try Cloud Geo Server first
+      const geoRes = await fetch("/api/geo/cameras", {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+
+      if (geoRes.ok) {
+        const geoData = await geoRes.json();
+        const camList: GeoCameraSummary[] = geoData.cameras || [];
+        setCameras(camList);
+
+        if (camList.length > 0) {
+          const current =
+            camList.find((c) => c.cam_id === selectedCamId) || camList[0];
+
+          if (!selectedCamId && current.cam_id) {
+            setSelectedCamId(current.cam_id);
+          }
+
+          const isOnline = current.status === "ONLINE" || Boolean(current.active);
+          const isSuspended = !current.active || current.status === "STANDBY";
+
+          setStats((prev) => ({
+            ...prev,
+            status: isSuspended ? "STANDBY" : (current.status || "ONLINE"),
+            is_suspended: isSuspended,
+            is_crowd: Boolean(current.is_crowd),
+            crowd_probability: typeof current.crowd_probability === "number" ? current.crowd_probability : 0.0,
+            people_count: current.person_count ?? 0,
+            density_per_megapixel: current.people_per_megapixel ?? 0.0,
+            dense_clusters_count: current.dense_clusters_count ?? 0,
+            gatherings_count: current.gatherings_count ?? 0,
+            camera_connected: isOnline,
+            camera_source: current.name || current.cam_id,
+            zone: current.zone || prev.zone,
+            resolution: "1920×1080",
+          }));
+
+          setStreamError(false);
+          setStreamConnected(isOnline && !isSuspended);
+          return;
+        }
+      }
+    } catch {
+      // Geo Server unreachable, fallback to local
+    }
+
+    // 2. Fallback to local edge server /stats
     try {
       const res = await fetch(`${DEFAULT_BACKEND_URL}/stats`, {
         cache: "no-store",
@@ -125,10 +194,9 @@ export default function DashboardPage() {
         setStreamConnected(false);
       }
     } catch {
-      // Backend is unreachable or starting up
       setStreamConnected(false);
     }
-  }, []);
+  }, [selectedCamId]);
 
   useEffect(() => {
     // Asynchronously trigger initial fetch without cascading render
@@ -136,14 +204,34 @@ export default function DashboardPage() {
       fetchTelemetry();
     }, 0);
 
-    pollIntervalRef.current = setInterval(fetchTelemetry, 450);
+    pollIntervalRef.current = setInterval(fetchTelemetry, 750);
     return () => {
       clearTimeout(initialTimer);
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, [fetchTelemetry]);
 
-  // If user enabled auto-start, automatically wake up the camera once on dashboard load
+  // Passenger Heartbeat Loop: keeps the active cloud stream alive on Geo Server (30s reaper)
+  useEffect(() => {
+    if (!selectedCamId) return;
+
+    const sendHeartbeat = async () => {
+      try {
+        await fetch(`/api/geo/cameras/${selectedCamId}/heartbeat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch {
+        // ignore
+      }
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 10000);
+    return () => clearInterval(interval);
+  }, [selectedCamId]);
+
+  // If user enabled auto-start, automatically wake up camera once on dashboard load
   useEffect(() => {
     if (autoStartCamera && !hasAutoEngagedRef.current && stats.is_suspended) {
       hasAutoEngagedRef.current = true;
@@ -169,33 +257,27 @@ export default function DashboardPage() {
     fetchTelemetry();
   };
 
-  // Called when camera is switched via modal (IP:Port, preset, etc.)
-  const handleCameraSwitched = useCallback(() => {
+  const handleSelectCamera = (camId: string) => {
+    setSelectedCamId(camId);
     setStreamError(false);
-    setStreamConnected(true);
     setStreamKey((prev) => prev + 1);
-    fetchTelemetry();
-  }, [fetchTelemetry]);
+  };
 
   // Toggle backend camera & inference power suspension
   const handleTogglePower = useCallback(async () => {
     setIsPowerToggling(true);
     try {
-      const res = await fetch(`${DEFAULT_BACKEND_URL}/camera/toggle`, {
+      const toggleUrl = selectedCamId
+        ? `/api/edge/cameras/${selectedCamId}/toggle`
+        : `${DEFAULT_BACKEND_URL}/camera/toggle`;
+
+      const res = await fetch(toggleUrl, {
         method: "POST",
         headers: { Accept: "application/json" },
       });
       if (res.ok) {
-        const data = await res.json();
-        setStats((prev) => ({
-          ...prev,
-          is_suspended: data.suspended,
-          status: data.suspended ? "SUSPENDED" : "INITIALIZING",
-        }));
-        if (!data.suspended) {
-          setStreamError(false);
-          setStreamKey((prev) => prev + 1);
-        }
+        setStreamError(false);
+        setStreamKey((prev) => prev + 1);
       }
     } catch (e) {
       console.error("Failed to toggle camera power:", e);
@@ -203,7 +285,7 @@ export default function DashboardPage() {
       setIsPowerToggling(false);
       fetchTelemetry();
     }
-  }, [fetchTelemetry]);
+  }, [selectedCamId, fetchTelemetry]);
 
   // Toggle 2D ground thermal density heatmap
   const handleToggleHeatmap = useCallback(async () => {
@@ -248,15 +330,14 @@ export default function DashboardPage() {
     return `${mins.toString().padStart(2, "0")}m ${secs.toString().padStart(2, "0")}s`;
   };
 
+  // Stream URL: prefers cloud Geo Server relay /api/geo/cameras/{id}/stream, falls back to /video_feed
+  const streamSrc = selectedCamId
+    ? `/api/geo/cameras/${selectedCamId}/stream?t=${streamKey}`
+    : `${backendUrl}/video_feed?t=${streamKey}`;
+
   return (
     <main className="relative h-screen max-h-screen w-full overflow-hidden bg-[#040508] text-white selection:bg-cyan-500/20 selection:text-white p-2.5 sm:p-3.5 lg:p-4 px-4 sm:px-6 lg:px-8 flex flex-col justify-between">
-      {/* 
-        The Animated Liquid Chrome Engine (Matching 404 Page Liquid Dynamics)
-        - baseColor: Deep void shadows
-        - chromeColor: Pure radiant liquid silver highlights (#f0f0f0)
-        - viscosity: 0.3 for heavy fluid mercury feel
-        - distortion: 0.7 for dynamic reactivity
-      */}
+      {/* Dynamic Molten Liquid Chrome Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <UiloraLiquidChrome
           baseColor="#040508"
@@ -268,7 +349,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Decorative Vignette matching 404 page (No heavy darkening blanket) */}
+      {/* Decorative Vignette */}
       <div
         aria-hidden="true"
         className="fixed inset-0 z-[1] pointer-events-none bg-[radial-gradient(circle_at_50%_50%,rgba(4,5,8,0.5)_0%,rgba(4,5,8,0.25)_40%,rgba(4,5,8,0.88)_100%)]"
@@ -279,6 +360,10 @@ export default function DashboardPage() {
         {/* TOP SECTION: LIVE VIDEO FOOTAGE */}
         <DashboardVideoFeed
           backendUrl={backendUrl}
+          streamSrc={streamSrc}
+          cameras={cameras}
+          selectedCamId={selectedCamId || undefined}
+          onSelectCamera={handleSelectCamera}
           stats={stats}
           streamConnected={streamConnected}
           streamError={streamError}
@@ -297,12 +382,11 @@ export default function DashboardPage() {
           isPowerToggling={isPowerToggling}
           autoStartCamera={autoStartCamera}
           onToggleAutoStart={handleToggleAutoStart}
-          onOpenSourceModal={() => setIsSourceModalOpen(true)}
           onToggleHeatmap={handleToggleHeatmap}
           onToggleClusters={handleToggleClusters}
         />
 
-        {/* BOTTOM ROW: RECTANGULAR BENTO GRID (INSET SLIGHTLY LESSER WIDTH THAN VIDEO) */}
+        {/* BOTTOM ROW: RECTANGULAR BENTO GRID */}
         <section className="shrink-0 w-full max-w-[92%] sm:max-w-[90%] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-2.5 select-none">
           {/* BOTTOM-LEFT BENTO CARD: CROWD DYNAMICS (8 COLUMNS) */}
           <CrowdDynamicsCard
@@ -319,21 +403,11 @@ export default function DashboardPage() {
             isPowerToggling={isPowerToggling}
             autoStartCamera={autoStartCamera}
             onToggleAutoStart={handleToggleAutoStart}
-            onOpenSourceModal={() => setIsSourceModalOpen(true)}
           />
         </section>
       </div>
 
-      {/* Camera Ingestion Source & IP Modal */}
-      <CameraSourceModal
-        isOpen={isSourceModalOpen}
-        onClose={() => setIsSourceModalOpen(false)}
-        backendUrl={backendUrl}
-        stats={stats}
-        onCameraSwitched={handleCameraSwitched}
-      />
-
-      {/* Floating Speed Dial Controls (Bottom Right - Matching Circle in Wireframe) */}
+      {/* Floating Speed Dial Controls */}
       <LiquidNavMenu
         isPaused={isPaused}
         onTogglePlayPause={() => setIsPaused((prev) => !prev)}

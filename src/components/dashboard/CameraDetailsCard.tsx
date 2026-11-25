@@ -14,7 +14,6 @@ export interface CameraDetailsCardProps {
   isPowerToggling?: boolean;
   autoStartCamera?: boolean;
   onToggleAutoStart?: () => void;
-  onOpenSourceModal?: () => void;
   className?: string;
 }
 
@@ -31,7 +30,6 @@ export default function CameraDetailsCard({
   isPowerToggling = false,
   autoStartCamera = false,
   onToggleAutoStart,
-  onOpenSourceModal,
   className = "",
 }: CameraDetailsCardProps) {
   const isSuspended = Boolean(stats.is_suspended || stats.status === "SUSPENDED");
@@ -55,22 +53,10 @@ export default function CameraDetailsCard({
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            {onOpenSourceModal && (
-              <LiquidGlassButton
-                onClick={onOpenSourceModal}
-                size="sm"
-                variant="subtle"
-                className="!px-3 !py-1 text-[11px] font-sans font-medium !border-white/20 hover:!border-white/40 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.35),0_4px_16px_rgba(0,0,0,0.5)]"
-                iconRight={<span className="text-[10px] text-white/60">↗</span>}
-                title="Switch optical camera node or configure IP & Port"
-              >
-                Switch Node
-              </LiquidGlassButton>
-            )}
             <LiquidPill
               size="xs"
               dotColor={isSuspended ? "bg-amber-400" : "bg-emerald-400"}
-              className="hidden sm:inline-flex text-[10px] text-white/70"
+              className="text-[10px] text-white/70"
             >
               {isSuspended ? "Standby" : "Active"}
             </LiquidPill>
@@ -82,21 +68,9 @@ export default function CameraDetailsCard({
           <div className="grid grid-cols-2 gap-x-4 gap-y-3 font-sans">
             {/* 1. Optical Sensor */}
             <div className="flex flex-col justify-center">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-medium text-white/45">
-                  Optical Sensor
-                </span>
-                {onOpenSourceModal && (
-                  <button
-                    type="button"
-                    onClick={onOpenSourceModal}
-                    className="text-[10px] font-sans font-medium text-white/60 hover:text-white transition-colors hover:underline"
-                    title="Configure Camera IP & Port"
-                  >
-                    Change
-                  </button>
-                )}
-              </div>
+              <span className="text-[10px] font-medium text-white/45">
+                Optical Sensor
+              </span>
               <span
                 className="mt-0.5 text-xs font-medium text-white/90 truncate"
                 title={stats.camera_source}

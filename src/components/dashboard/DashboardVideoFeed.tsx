@@ -13,6 +13,10 @@ export interface DashboardVideoFeedProps {
   streamError: boolean;
   streamKey: number;
   isAlert: boolean;
+  streamSrc?: string;
+  cameras?: Array<{ cam_id: string; name: string; zone?: string; active?: boolean }>;
+  selectedCamId?: string;
+  onSelectCamera?: (camId: string) => void;
   onRetry: () => void;
   onStreamLoad: () => void;
   onStreamError: () => void;
@@ -20,7 +24,6 @@ export interface DashboardVideoFeedProps {
   isPowerToggling?: boolean;
   autoStartCamera?: boolean;
   onToggleAutoStart?: () => void;
-  onOpenSourceModal?: () => void;
   onToggleHeatmap?: () => void;
   onToggleClusters?: () => void;
   className?: string;
@@ -40,6 +43,10 @@ export default function DashboardVideoFeed({
   streamError,
   streamKey,
   isAlert,
+  streamSrc,
+  cameras,
+  selectedCamId,
+  onSelectCamera,
   onRetry,
   onStreamLoad,
   onStreamError,
@@ -47,7 +54,6 @@ export default function DashboardVideoFeed({
   isPowerToggling = false,
   autoStartCamera = false,
   onToggleAutoStart,
-  onOpenSourceModal,
   onToggleHeatmap,
   onToggleClusters,
   className = "",
@@ -65,7 +71,7 @@ export default function DashboardVideoFeed({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           key={streamKey}
-          src={`${backendUrl}/video_feed`}
+          src={streamSrc || `${backendUrl}/video_feed`}
           alt=""
           className={`h-full w-full object-contain transition-opacity duration-300 select-none pointer-events-none ${
             streamConnected && !streamError && !isSuspended
@@ -126,33 +132,6 @@ export default function DashboardVideoFeed({
               >
                 {isPowerToggling ? "Starting Camera..." : "Turn On Camera"}
               </LiquidGlassButton>
-
-              {onOpenSourceModal && (
-                <LiquidGlassButton
-                  onClick={onOpenSourceModal}
-                  size="sm"
-                  variant="subtle"
-                  className="pointer-events-auto text-xs font-sans font-medium !border-white/15 hover:!border-white/30"
-                  iconLeft={
-                    <svg
-                      className="h-3.5 w-3.5 text-white/70 shrink-0"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.8}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
-                    </svg>
-                  }
-                  iconRight={<span className="text-white/40 text-[10px]">↗</span>}
-                >
-                  Switch Camera Source
-                </LiquidGlassButton>
-              )}
 
               {onToggleAutoStart && (
                 <button
@@ -243,33 +222,6 @@ export default function DashboardVideoFeed({
                 Retry Connection
               </LiquidGlassButton>
 
-              {onOpenSourceModal && (
-                <LiquidGlassButton
-                  onClick={onOpenSourceModal}
-                  size="sm"
-                  variant="subtle"
-                  className="font-sans text-xs font-medium !border-white/15 hover:!border-white/30"
-                  iconLeft={
-                    <svg
-                      className="h-3.5 w-3.5 text-white/70 shrink-0"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.8}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
-                    </svg>
-                  }
-                  iconRight={<span className="text-white/40 text-[10px]">↗</span>}
-                >
-                  Switch Camera Source
-                </LiquidGlassButton>
-              )}
-
               <LiquidGlassButton
                 href="https://github.com/kodo-kaze/pedestrian-crowd-detection-models"
                 size="sm"
@@ -312,36 +264,45 @@ export default function DashboardVideoFeed({
             </span>
           </LiquidPill>
 
-          {/* Camera Node / Source Selector Quick Switch (LiquidGlassButton) */}
-          {onOpenSourceModal && (
-            <LiquidGlassButton
-              onClick={onOpenSourceModal}
-              size="sm"
-              variant="subtle"
-              className="pointer-events-auto !px-3.5 !py-1.5 text-xs font-sans font-medium !border-white/20 hover:!border-white/40 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.35),0_4px_16px_rgba(0,0,0,0.5)]"
-              iconLeft={
-                <svg
-                  className="h-3.5 w-3.5 text-white/70 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-              }
-              iconRight={<span className="text-white/40 text-[10px]">▾</span>}
-            >
-              <span className="truncate max-w-[140px] sm:max-w-[200px]">
-                {stats.camera_ip
-                  ? `${stats.camera_ip}:${stats.camera_port}`
-                  : stats.camera_source?.split("(")[0]?.trim() || "Select Camera"}
+          {/* Active Optical Node / Multi-Camera Switcher */}
+          {cameras && cameras.length > 1 ? (
+            <div className="pointer-events-auto flex items-center gap-1 p-0.5 rounded-full border border-white/20 bg-black/50 backdrop-blur-md">
+              {cameras.map((c) => {
+                const isSelected = c.cam_id === selectedCamId;
+                return (
+                  <button
+                    key={c.cam_id}
+                    onClick={() => onSelectCamera?.(c.cam_id)}
+                    className={`px-3 py-1 rounded-full text-xs font-sans font-medium transition-all cursor-pointer ${
+                      isSelected
+                        ? "border border-cyan-400/50 bg-cyan-950/70 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.35)]"
+                        : "text-white/60 hover:text-white hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    {c.name || c.cam_id}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <LiquidPill size="sm" variant="glass" className="pointer-events-auto">
+              <svg
+                className="h-3.5 w-3.5 text-white/70 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.8}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+              <span className="truncate max-w-[160px] sm:max-w-[220px]">
+                {stats.camera_source?.split("(")[0]?.trim() || "Active CCTV Feed"}
               </span>
-            </LiquidGlassButton>
+            </LiquidPill>
           )}
 
           {/* Quick Camera On/Off Power Action (LiquidGlassButton) */}
