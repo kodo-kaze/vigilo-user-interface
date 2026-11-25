@@ -27,6 +27,8 @@ export interface DashboardVideoFeedProps {
   onToggleHeatmap?: () => void;
   onToggleClusters?: () => void;
   className?: string;
+  locationCoords?: { lat: number; lon: number } | null;
+  distanceMeters?: number | null;
 }
 
 /**
@@ -57,6 +59,8 @@ export default function DashboardVideoFeed({
   onToggleHeatmap,
   onToggleClusters,
   className = "",
+  locationCoords,
+  distanceMeters,
 }: DashboardVideoFeedProps) {
   const isSuspended = Boolean(stats.is_suspended || stats.status === "SUSPENDED");
 
@@ -336,6 +340,40 @@ export default function DashboardVideoFeed({
 
         {/* Top-Right Floating Overlay HUD (Controls & Resolution) */}
         <div className="pointer-events-none absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-20 flex flex-wrap items-center justify-end gap-2 select-none">
+          {/* Nearest Sensor Proximity Distance Radar (Matching Vigilo Radar) */}
+          {distanceMeters != null && (
+            <LiquidPill
+              size="md"
+              variant="cyan"
+              dotColor="bg-cyan-400"
+              dotPulse
+              className="pointer-events-auto"
+              title="Distance from your detected location to this camera"
+            >
+              <span className="font-mono text-cyan-200 text-xs font-medium">
+                {distanceMeters < 1000
+                  ? `📍 ${Math.round(distanceMeters)}m away`
+                  : `📍 ${(distanceMeters / 1000).toFixed(1)}km away`}
+              </span>
+            </LiquidPill>
+          )}
+
+          {/* Live User GPS Location HUD Pill */}
+          {locationCoords && (
+            <LiquidPill
+              size="md"
+              variant="glass"
+              dotColor="bg-emerald-400"
+              className="pointer-events-auto hidden md:inline-flex"
+              title="Live Detected GPS Coordinates"
+            >
+              <span className="text-white/50 text-[10px]">GPS:</span>
+              <span className="text-emerald-300/90 font-mono text-[11px]">
+                {locationCoords.lat.toFixed(4)}, {locationCoords.lon.toFixed(4)}
+              </span>
+            </LiquidPill>
+          )}
+
           {/* Ground Heatmap Live Toggle */}
           {onToggleHeatmap && !isSuspended && (
             <LiquidGlassButton

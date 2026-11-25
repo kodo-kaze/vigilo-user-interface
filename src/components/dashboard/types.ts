@@ -23,6 +23,12 @@ export interface TelemetryStats {
   zone?: string;
   model_mesh?: string;
   uptime_seconds?: number;
+  lat?: number | null;
+  lon?: number | null;
+  user_lat?: number | null;
+  user_lon?: number | null;
+  distance_meters?: number | null;
+  accuracy?: number | null;
 }
 
 export interface CameraPreset {

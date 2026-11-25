@@ -93,7 +93,35 @@ export default function CameraDetailsCard({
               </span>
             </div>
 
-            {/* 3. Resolution & Capture Rate */}
+            {/* 3. Sensor GPS Location */}
+            <div className="flex flex-col justify-center">
+              <span className="text-[10px] font-medium text-white/45">
+                Camera GPS (Lat/Lon)
+              </span>
+              <span className="mt-0.5 text-xs font-mono font-medium text-cyan-300/90 truncate">
+                {stats.lat != null && stats.lon != null
+                  ? `${stats.lat.toFixed(4)}°, ${stats.lon.toFixed(4)}°`
+                  : "22.8831°, 88.7621°"}
+              </span>
+            </div>
+
+            {/* 4. Radar Proximity to User */}
+            <div className="flex flex-col justify-center">
+              <span className="text-[10px] font-medium text-white/45">
+                User Proximity
+              </span>
+              <span className="mt-0.5 text-xs font-mono font-medium text-emerald-300/90 truncate">
+                {stats.distance_meters != null
+                  ? stats.distance_meters < 1000
+                    ? `${Math.round(stats.distance_meters)}m away`
+                    : `${(stats.distance_meters / 1000).toFixed(1)}km away`
+                  : stats.user_lat != null
+                  ? "Calibrating range..."
+                  : "Detecting GPS..."}
+              </span>
+            </div>
+
+            {/* 5. Resolution & Capture Rate */}
             <div className="flex flex-col justify-center">
               <span className="text-[10px] font-medium text-white/45">
                 Capture Rate
@@ -105,7 +133,7 @@ export default function CameraDetailsCard({
               </span>
             </div>
 
-            {/* 4. Stream Protocol */}
+            {/* 6. Stream Protocol */}
             <div className="flex flex-col justify-center">
               <span className="text-[10px] font-medium text-white/45">
                 Stream Protocol
@@ -113,23 +141,21 @@ export default function CameraDetailsCard({
               <span className="mt-0.5 text-xs font-medium text-white/90 truncate">
                 {isSuspended
                   ? "Standby / Suspended"
-                  : stats.camera_ip
-                  ? `RTSP (${stats.camera_ip})`
-                  : "MJPEG Zero-latency"}
+                  : "Reverse WS Cloud Bridge"}
               </span>
             </div>
 
-            {/* 5. AI Vision Pipeline */}
+            {/* 7. AI Vision Pipeline */}
             <div className="flex flex-col justify-center">
               <span className="text-[10px] font-medium text-white/45">
                 AI Vision Pipeline
               </span>
               <span className="mt-0.5 text-xs font-medium text-white/90 truncate">
-                {isSuspended ? "Suspended (0% Compute)" : "YOLO26m + RF-21"}
+                {isSuspended ? "Suspended (0% Compute)" : "YOLO26m + Conflux + RF-21"}
               </span>
             </div>
 
-            {/* 6. System Uptime */}
+            {/* 8. System Uptime */}
             <div className="flex flex-col justify-center">
               <span className="text-[10px] font-medium text-white/45">
                 System Uptime
