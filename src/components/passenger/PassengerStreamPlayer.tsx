@@ -44,9 +44,9 @@ export default function PassengerStreamPlayer({
   const isModerateCrowd = Boolean((camera?.crowd_probability || 0) >= 0.3 && !isCrowdAlert);
   const isCameraOnline = camera?.status === "ONLINE" || camera?.active;
 
-  // Stream URL fallback: directly proxy to edge stream or general feed
-  const edgeMjpegUrl = camera?.cam_id
-    ? `/api/edge/cameras/${camera.cam_id}/stream?t=${streamKey}`
+  // Live MJPEG stream served securely through Geo Server reverse WebSocket relay
+  const cloudMjpegUrl = camera?.cam_id
+    ? `/api/geo/cameras/${camera.cam_id}/stream?t=${streamKey}`
     : `/video_feed?t=${streamKey}`;
 
   return (
@@ -77,7 +77,7 @@ export default function PassengerStreamPlayer({
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 key={streamKey}
-                src={edgeMjpegUrl}
+                src={cloudMjpegUrl}
                 alt={camera?.name || "Live Station Feed"}
                 className="h-full w-full object-contain select-none transition-opacity duration-300"
                 onError={() => setStreamError(true)}
