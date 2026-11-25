@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const INTERNAL_BACKEND_URL =
   process.env.INTERNAL_BACKEND_URL || "http://127.0.0.1:8000";
 const GEO_SERVER_URL =
-  process.env.GEO_SERVER_URL || "http://127.0.0.1:8001";
+  process.env.GEO_SERVER_URL || "https://vigilo-geo-server.onrender.com";
 
 const nextConfig: NextConfig = {
   output: "standalone",
